@@ -35,7 +35,7 @@ docker compose up -d --build --wait
 
 | 登录名 | 角色 | 可执行操作 |
 |---|---|---|
-| operator | 资料操作员 | 登记业务资料、设置「本次允许改号张数」、提交、查看和下载结果 |
+| operator | 资料操作员 | 登记业务资料、设置「本次允许改号张数」、提交、撤销排队或试写中的批次、查看和下载结果 |
 | reviewer | 业务复核员 | 查看执行证据、签署单次复核、下载交接单 |
 | viewer | 只读观察员 | 查看资料、执行结果及审计，下载证据 |
 
@@ -53,6 +53,17 @@ docker compose up -d --build --wait
 从 `backend/src/domain/scenario.py` 修改业务入口和演示口径，运行 `docker compose up -d --build --wait` 查看变更。数据库表结构在 `backend/src/models` 和 `backend/migrations`，输入模型在 `backend/src/schemas`。业务页和请求接口在 `frontend/src/pages`、`frontend/src/api`。资料、执行、复核三个工作流实体各有独立表和 API；场景输入及结果保留在所属资料和批次中。
 
 角色枚举在 `backend/src/constants/roles.py`、`frontend/src/constants/roles.js`，用于服务端访问控制、账号初始化、前端导航与签署。批次状态在 `backend/src/constants/job_state.py`、`frontend/src/constants/states.js`，用于队列、状态 API、状态标记与轮询。登记、提交、完成和签署事件写入审计表。
+
+### 批次撤单
+
+制签员选错卷时，可在「目标试写」工作台对**排队中或正在试写**的批次撤单（`POST /runs/{id}/cancel`，仅 operator）。撤单与试写完成靠行锁和条件更新保证「先落定者赢」：
+
+- 试写占用行锁时，撤单事务等待锁释放后落定；若等待超时或死锁，返回 409 提示重新确认，不写半成状态。
+- 已 `done`/`failed` 的批次拒绝撤单（409），照常交接；worker 的落库语句带 `status = 'queued'` 守卫，已撤批次即使晚收到试写结果也保持 `cancelled`，不出交接单。
+- 撤单只更新本批这一行并释放其试写占用，同卷其他批次仍由 worker 的 `SKIP LOCKED` 队列正常处理。
+- 撤单接口幂等：对已撤批次重试返回当前状态且不重复写审计；回执丢失时可安全重试。
+
+新状态 `cancelled` 及撤单字段由幂等迁移 `backend/migrations/v002_run_cancellation.py` 补入既有数据库，全新库直接由声明式建表得到。
 
 `COMPOSE_PROJECT_NAME` 设置栈名，`FRONTEND_PORT`、`BACKEND_PORT`、`DB_PORT` 设置端口。通过 `DB_PASSWORD`、`JWT_SECRET`、`DEMO_PASSWORD` 配置本地凭据。设置 `SEED_DEMO=false` 可关闭演示数据载入，此时数据库初始没有演示账号。数据库密码调整后，已有数据卷需在数据库内同步修改用户密码。
 

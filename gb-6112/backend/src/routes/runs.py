@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from src.config.resources import engine
 from src.constants.job_state import JobState
-from src.controllers.access import identity, reviewer
-from src.controllers.workbench import new_review
+from src.controllers.access import identity, operator, reviewer
+from src.controllers.workbench import cancel_run, new_review
 from src.schemas.reviews import ReviewEntry, ReviewInput
-from src.schemas.runs import RunEntry
+from src.schemas.runs import CancelInput, RunEntry
 from src.services import reviews, runs
 from src.utils.serial import canonical_json
 
@@ -22,6 +22,11 @@ def list_runs():
 def run_detail(run_id: int):
     with engine.connect() as db:
         return runs.get(db, run_id)
+
+
+@router.post("/{run_id}/cancel", response_model=RunEntry)
+def cancel(run_id: int, form: CancelInput | None = None, user=Depends(operator)):
+    return cancel_run(run_id, form, user)
 
 
 @router.get("/{run_id}/review", response_model=ReviewEntry | None, dependencies=[Depends(identity)])

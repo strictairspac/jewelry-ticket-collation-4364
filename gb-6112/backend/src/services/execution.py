@@ -46,6 +46,7 @@ def fail(job_failure):
         run_id = job_failure.run_id
         statement = select(runs.c.status).where(runs.c.id == run_id).with_for_update()
         if db.scalar(statement) != JobState.QUEUED:
+            # A cancellation landed while the failing transaction rolled back. Keep that outcome.
             return
         cause = job_failure.cause
         if isinstance(cause, (ValueError, TypeError, KeyError, OverflowError)):
@@ -56,5 +57,13 @@ def fail(job_failure):
 
 
 def finish(db, run_id, output):
-    db.execute(update(runs).where(runs.c.id == run_id).values(**output, finished_at=int(time())))
-    record(db, str(output["status"]), "worker", "run", run_id)
+    # Only a still-queued batch may accept the worker's outcome. A cancelled batch keeps its
+    # terminal state even if the trial-write result arrives afterwards, and produces no handoff.
+    changed = db.execute(
+        update(runs).where(runs.c.id == run_id, runs.c.status == JobState.QUEUED)
+        .values(**output, finished_at=int(time()))
+    ).rowcount
+    if changed:
+        record(db, str(output["status"]), "worker", "run", run_id)
+    else:
+        logger.info("Run %s already settled; worker outcome %s discarded", run_id, output["status"])

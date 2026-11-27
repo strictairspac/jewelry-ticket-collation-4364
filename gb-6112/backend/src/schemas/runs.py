@@ -6,6 +6,10 @@ class RunInput(BaseModel):
     parameter: int = Field(strict=True, ge=1)
 
 
+class CancelInput(BaseModel):
+    reason: str | None = Field(default=None, max_length=320)
+
+
 class RunEntry(BaseModel):
     id: int
     case_id: int
@@ -18,3 +22,5 @@ class RunEntry(BaseModel):
     result: dict | None
     failure: str | None
     digest: str | None
+    cancel_reason: str | None = None
+    cancelled_by: str | None = None

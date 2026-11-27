@@ -8,6 +8,7 @@ export const api = {
   runs: () => request("/runs"),
   run: (id, signal) => request(`/runs/${id}`, {signal}),
   enqueue: (id, data) => request(`/cases/${id}/runs`, {method: "POST", data}),
+  cancelRun: (id, data) => request(`/runs/${id}/cancel`, {method: "POST", data}),
   review: id => request(`/runs/${id}/review`),
   submitReview: (id, data) => request(`/runs/${id}/review`, {method: "POST", data}),
   export: id => request(`/runs/${id}/export`, {raw: true}),

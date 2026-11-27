@@ -23,3 +23,9 @@ def new_run(case_id, data, user):
 def new_review(run_id, data, user):
     with engine.begin() as db:
         return reviews.sign(db, run_id, data, user["username"])
+
+
+def cancel_run(run_id, data, user):
+    reason = data.reason if data is not None else None
+    with engine.begin() as db:
+        return runs.cancel(db, run_id, user["username"], reason)

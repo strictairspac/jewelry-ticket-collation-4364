@@ -36,6 +36,11 @@ summary { cursor: pointer; color: var(--accent); }
 [role=alert]:empty { display: none; }
 .boot, .error-screen { margin: clamp(1rem, 6vw, 6rem); }
 .feedback, .state-failed { color: var(--signal); overflow-wrap: anywhere; }
+.state-cancelled { color: var(--muted); }
+.cancel-panel { display: grid; gap: .6rem; margin-top: .4rem; padding-top: .8rem; border-top: 1px solid var(--rule); }
+.cancel-panel input { max-width: 26rem; }
+.cancel-hint { color: var(--muted); font-size: .88rem; }
+button.cancel-button { background: var(--signal); }
 .login {
   min-height: 100vh; display: grid; grid-template-columns: minmax(0, var(--login-ratio)) minmax(19rem, 2fr);
   align-items: center; padding: clamp(1rem, 7vw, 7.5rem); gap: clamp(1.5rem, 6vw, 6rem);
